@@ -46,22 +46,48 @@ public class Movement : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (_moveInput != 0 && Mathf.Abs(_rigidbody.linearVelocityX) < _maxSpeed)
+        float xVelocity = _rigidbody.linearVelocityX;
+
+        bool hasInput = Mathf.Abs(_moveInput) > 0.01f;
+        bool moving = Mathf.Abs(xVelocity) > 0.01f;
+
+        if (hasInput && moving && Mathf.Sign(_moveInput) != Mathf.Sign(xVelocity))
         {
-            _rigidbody.AddForceX(_acceleration * _moveInput);
+            ApplyBraking(xVelocity);
+            return;
         }
-        if(_moveInput == 0 || Mathf.Sign(_rigidbody.linearVelocityX) != Mathf.Sign(_moveInput))
+
+        if (hasInput)
         {
-            if (Mathf.Sign(_rigidbody.linearVelocityX) > 0)
+            if (Mathf.Abs(xVelocity) < _maxSpeed)
             {
-                _rigidbody.AddForceX(Mathf.Min(_deceleration * -_rigidbody.linearVelocityX, -_rigidbody.linearVelocityX));
+                _rigidbody.AddForce(Vector2.right * (_moveInput * _acceleration), ForceMode2D.Force);
             }
-            else
-            {
-                _rigidbody.AddForceX(Mathf.Max(_deceleration * -_rigidbody.linearVelocityX, -_rigidbody.linearVelocityX));
-            }
+            return;
         }
-        
+
+        if (!hasInput && moving)
+        {
+            ApplyBraking(xVelocity);
+        }
+    }
+
+
+    private void ApplyBraking(float xVelocity)
+    {
+        if (Mathf.Abs(xVelocity) < 0.05f)
+        {
+            _rigidbody.linearVelocityX = 0;
+            return;
+        }
+
+        float decelDirection = -Mathf.Sign(xVelocity);
+        float maxBrakeForce = _deceleration;
+
+        float neededForce = Mathf.Abs(xVelocity) / Time.fixedDeltaTime;
+        float brakeForce = Mathf.Min(maxBrakeForce, neededForce);
+
+        _rigidbody.AddForce(Vector2.right * (brakeForce * decelDirection), ForceMode2D.Force);
     }
 
     private bool CheckGround()
